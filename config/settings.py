@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 import dj_database_url
 
@@ -24,9 +25,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-1@%ca4a=pw2kftdn--szi8%s%qpkcc#)cjk=dr(vv!@i^c-$2k'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get("DEBUG", "") == "1"
 
-ALLOWED_HOSTS = ['luneetlilas-8o5g80o6p-aria-vero-s-projects.vercel.app']
+if DEBUG:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = [
+        "luneetlilas-8o5g80o6p-aria-vero-s-projects.vercel.app",
+        # add any of your preview domains here, or
+        # "luneetlilas.vercel.app" if you enabled that
+    ]
+
+ALLOWED_HOSTS = ['https://luneetlilas.vercel.app/', 'https://luneetlilas-aria-vero-s-aria-vero-s-projects.vercel.app/', 'https://luneetlilas-ee9u1uv1i-aria-vero-s-projects.vercel.app/', 'luneetlilas-8o5g80o6p-aria-vero-s-projects.vercel.app']
 
 
 # Application definition
