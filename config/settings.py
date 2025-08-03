@@ -30,13 +30,9 @@ DEBUG = os.environ.get("DEBUG", "") == "1"
 if DEBUG:
     ALLOWED_HOSTS = ["*"]
 else:
-    ALLOWED_HOSTS = [
-        "luneetlilas-8o5g80o6p-aria-vero-s-projects.vercel.app",
-        # add any of your preview domains here, or
-        # "luneetlilas.vercel.app" if you enabled that
-    ]
+    ALLOWED_HOSTS = ["*"]
 
-ALLOWED_HOSTS = ['https://luneetlilas.vercel.app/', 'https://luneetlilas-aria-vero-s-aria-vero-s-projects.vercel.app/', 'https://luneetlilas-ee9u1uv1i-aria-vero-s-projects.vercel.app/', 'luneetlilas-8o5g80o6p-aria-vero-s-projects.vercel.app']
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
