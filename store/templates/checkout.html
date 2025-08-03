@@ -1,0 +1,10 @@
+<button id="checkout-button">Pay</button>
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+  const stripe = Stripe('{{ STRIPE_PUBLIC_KEY }}');
+  document.getElementById('checkout-button').addEventListener('click', () => {
+    fetch("{% url 'store:create_checkout_session' %}", { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
+      .then(res => res.json())
+      .then(data => stripe.redirectToCheckout({ sessionId: data.id }));
+  });
+</script>

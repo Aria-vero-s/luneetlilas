@@ -1,0 +1,7 @@
+<!-- example in product_list.html -->
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+...
+{% for product in products %}
+  <a href="{% url 'store:product_detail' product.slug %}">{{ product.name }}</a>
+{% endfor %}
