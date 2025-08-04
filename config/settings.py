@@ -24,15 +24,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: don't run with debug turned on in production!
 env = environ.Env(
-    DEBUG=(bool, True),
     ALLOWED_HOSTS=(list, ["127.0.0.1","localhost"])
 )
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 # core settings
 SECRET_KEY = env("SECRET_KEY")
-DEBUG      = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+
+DEBUG = env("DEBUG")
+if DEBUG:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
 # Application definition
 
