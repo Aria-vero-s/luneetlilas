@@ -1,12 +1,12 @@
 import os
+from dotenv import load_dotenv
 
+# 1) Set your settings module before loading Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
-from dotenv import load_dotenv
-load_dotenv()  # only for local .env
+# 2) Load any local .env for dev
+load_dotenv()  # (Vercel will use real env-vars you configure in the Dashboard)
 
-from serverless_wsgi import handle_request
-from config.wsgi import application
-
-def handler(event, context):
-    return handle_request(application, event, context)
+# 3) Get the WSGI application
+from django.core.wsgi import get_wsgi_application
+app = get_wsgi_application()
