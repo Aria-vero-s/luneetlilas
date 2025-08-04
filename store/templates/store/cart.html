@@ -32,6 +32,6 @@
   </table>
   <a href="{% url 'store:checkout' %}" class="btn btn-primary">Proceed to Checkout</a>
 {% else %}
-  <p>Your cart is empty. <a href="{% url 'store:product-list' %}">Shop now</a>.</p>
+  <p>Your cart is empty. <a href="{% url 'store:product_list' %}">Shop now</a>.</p>
 {% endif %}
 {% endblock %}
