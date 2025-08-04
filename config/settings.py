@@ -41,12 +41,18 @@ else:
 # Application definition
 
 INSTALLED_APPS = [
+    'django.contrib.sites',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.facebook',
     'store',
 ]
 
@@ -59,6 +65,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -78,8 +85,18 @@ TEMPLATES = [
     },
 ]
 
+SITE_ID = 1
+
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# Redirect URLs
+LOGIN_URL = 'account_login'
+LOGIN_REDIRECT_URL = 'store:product_list'
+LOGOUT_REDIRECT_URL = 'store:home'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -115,6 +132,12 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',  # default
+    'allauth.account.auth_backends.AuthenticationBackend',  # allauth
+]
+
 
 
 # Internationalization

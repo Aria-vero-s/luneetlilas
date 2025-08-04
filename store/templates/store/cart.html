@@ -1,37 +1,38 @@
-{% extends 'base.html' %}
-{% block title %}Your Cart – My Shop{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Your Cart – Lune & Lilas{% endblock %}
+
 {% block content %}
-<h2>Your Cart</h2>
-{% if order.items.exists %}
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Product</th>
-        <th>Qty</th>
-        <th>Price</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in order.items.all %}
-      <tr>
-        <td>{{ item.product.name }}</td>
-        <td>{{ item.quantity }}</td>
-        <td>{{ item.get_total_item_price }} €</td>
-        <td>
-          <a href="{% url 'store:remove-from-cart' item.product.slug %}" 
-             class="btn btn-sm btn-danger">Remove</a>
-        </td>
-      </tr>
-      {% endfor %}
-      <tr>
-        <td colspan="2" class="text-end"><strong>Total:</strong></td>
-        <td colspan="2"><strong>{{ order.get_total }} €</strong></td>
-      </tr>
-    </tbody>
-  </table>
-  <a href="{% url 'store:checkout' %}" class="btn btn-primary">Proceed to Checkout</a>
-{% else %}
-  <p>Your cart is empty. <a href="{% url 'store:product_list' %}">Shop now</a>.</p>
-{% endif %}
+<main class="flex-1 min-h-screen bg-background">
+  <section class="py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Breadcrumb -->
+      <div class="flex items-center space-x-2 mb-8 fade-in">
+        <a href="{% url 'store:product_list' %}" class="flex items-center space-x-2 text-gray-600 hover:text-lilac-600 transition-colors duration-300">
+          <i data-lucide="arrow-left" class="h-4 w-4"></i>
+          <span class="font-body">Continue Shopping</span>
+        </a>
+      </div>
+
+      <div id="cart-content">
+        <!-- JavaScript will populate cart here -->
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+  <!-- Your compiled JS bundle -->
+  <script src="{% static 'js/luneetlilas-complete.js' %}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) lucide.createIcons();
+      // Initialize your CartPage class from luneetlilas-complete.js
+      if (window.CartPage) {
+        window.cartPage = new CartPage();
+      }
+    });
+  </script>
 {% endblock %}

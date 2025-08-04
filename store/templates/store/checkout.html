@@ -1,20 +1,572 @@
-{% extends 'base.html' %}
-{% block title %}Checkout – My Shop{% endblock %}
-{% block extra_head %}
-<script src="https://js.stripe.com/v3/"></script>
-{% endblock %}
-{% block content %}
-<h2>Checkout</h2>
-<p>Total: <strong>{{ request.user.order_set.get(ordered=False).get_total }} €</strong></p>
-<button id="checkout-button" class="btn btn-lg btn-success">Pay with Card</button>
-{% endblock %}
-{% block extra_js %}
-<script>
-  const stripe = Stripe('{{ STRIPE_PUBLIC_KEY }}');
-  document.getElementById('checkout-button').addEventListener('click', () => {
-    fetch("{% url 'store:create_checkout_session' %}", { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
-      .then(res => res.json())
-      .then(data => stripe.redirectToCheckout({ sessionId: data.id }));
-  });
-</script>
-{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - Lune & Lilas</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2024/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💜</text></svg>">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+    <div class="min-h-screen bg-background">
+        <!-- Header will be injected -->
+        <div id="header-container"></div>
+
+        <!-- Main Content -->
+        <main class="flex-1">
+            <section class="py-12 min-h-screen">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <!-- Breadcrumb will be injected -->
+                    <div id="breadcrumb-container"></div>
+                    
+                    <!-- Checkout Content -->
+                    <div id="checkout-content">
+                        <!-- Content will be populated by JavaScript -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer will be injected -->
+        <div id="footer-container"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="translations.js"></script>
+    <script src="data.js"></script>
+    <script src="utils.js"></script>
+    <script src="js/page-templates.js"></script>
+    <script src="js/cart-manager.js"></script>
+    <script>
+        class CheckoutPage {
+            constructor() {
+                this.currentLanguage = 'en';
+                this.cartManager = new CartManager();
+                this.currentStep = 'shipping';
+                this.formData = {
+                    shipping: {},
+                    payment: {},
+                    billing: {}
+                };
+                
+                this.init();
+            }
+            
+            init() {
+                this.renderPage();
+                this.setupEventListeners();
+                this.cartManager.updateCartCount();
+                this.renderCheckout();
+                this.initializeLucideIcons();
+            }
+            
+            renderPage() {
+                // Inject header
+                document.getElementById('header-container').innerHTML = PageTemplates.createHeader('checkout');
+                
+                // Inject breadcrumb
+                const breadcrumbLinks = [
+                    { href: 'cart.html', icon: 'arrow-left', text: 'Back to Cart' }
+                ];
+                document.getElementById('breadcrumb-container').innerHTML = PageTemplates.createBreadcrumb(breadcrumbLinks);
+                
+                // Inject footer
+                document.getElementById('footer-container').innerHTML = PageTemplates.createFooter();
+            }
+            
+            setupEventListeners() {
+                // Header event listeners
+                const cartToggle = document.getElementById('cart-toggle');
+                if (cartToggle) {
+                    cartToggle.addEventListener('click', () => this.cartManager.toggleCartSidebar());
+                }
+                
+                const mobileCart = document.getElementById('mobile-cart');
+                if (mobileCart) {
+                    mobileCart.addEventListener('click', () => {
+                        this.cartManager.toggleCartSidebar();
+                        this.toggleMobileMenu();
+                    });
+                }
+                
+                // Mobile menu toggle
+                const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+                if (mobileMenuToggle) {
+                    mobileMenuToggle.addEventListener('click', () => this.toggleMobileMenu());
+                }
+                
+                // Language toggle
+                const langToggle = document.getElementById('lang-toggle');
+                if (langToggle) {
+                    langToggle.addEventListener('click', () => this.toggleLanguage());
+                }
+                
+                // Newsletter form
+                const newsletterForm = document.getElementById('newsletter-form');
+                if (newsletterForm) {
+                    newsletterForm.addEventListener('submit', (e) => this.handleNewsletterSubmit(e));
+                }
+            }
+            
+            renderCheckout() {
+                const container = document.getElementById('checkout-content');
+                
+                if (this.cartManager.cart.length === 0) {
+                    this.renderEmptyCheckout(container);
+                    return;
+                }
+                
+                const t = window.translations[this.currentLanguage];
+                
+                container.innerHTML = `
+                    <div class="fade-in">
+                        <h1 class="font-heading text-4xl mb-8 text-gray-800 text-center">${t.checkout.title}</h1>
+                        
+                        <!-- Progress Steps -->
+                        <div class="flex items-center justify-center mb-12">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 rounded-full ${this.currentStep === 'shipping' ? 'bg-lilac-600 text-white' : 'bg-lilac-100 text-lilac-600'} flex items-center justify-center font-medium">1</div>
+                                    <span class="ml-2 font-body ${this.currentStep === 'shipping' ? 'text-lilac-600' : 'text-gray-500'}">${t.checkout.shipping}</span>
+                                </div>
+                                <div class="w-12 h-0.5 ${this.currentStep === 'payment' || this.currentStep === 'review' ? 'bg-lilac-600' : 'bg-gray-300'}"></div>
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 rounded-full ${this.currentStep === 'payment' ? 'bg-lilac-600 text-white' : this.currentStep === 'review' ? 'bg-lilac-600 text-white' : 'bg-gray-100 text-gray-400'} flex items-center justify-center font-medium">2</div>
+                                    <span class="ml-2 font-body ${this.currentStep === 'payment' || this.currentStep === 'review' ? 'text-lilac-600' : 'text-gray-500'}">${t.checkout.payment}</span>
+                                </div>
+                                <div class="w-12 h-0.5 ${this.currentStep === 'review' ? 'bg-lilac-600' : 'bg-gray-300'}"></div>
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 rounded-full ${this.currentStep === 'review' ? 'bg-lilac-600 text-white' : 'bg-gray-100 text-gray-400'} flex items-center justify-center font-medium">3</div>
+                                    <span class="ml-2 font-body ${this.currentStep === 'review' ? 'text-lilac-600' : 'text-gray-500'}">${t.checkout.review}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid lg:grid-cols-3 gap-12">
+                            <div class="lg:col-span-2">
+                                ${this.renderCurrentStep()}
+                            </div>
+                            
+                            <div class="lg:col-span-1">
+                                ${this.renderOrderSummary()}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                this.setupFormEventListeners();
+                this.initializeLucideIcons();
+            }
+            
+            renderCurrentStep() {
+                switch (this.currentStep) {
+                    case 'shipping':
+                        return this.renderShippingForm();
+                    case 'payment':
+                        return this.renderPaymentForm();
+                    case 'review':
+                        return this.renderReviewStep();
+                    default:
+                        return this.renderShippingForm();
+                }
+            }
+            
+            renderShippingForm() {
+                const t = window.translations[this.currentLanguage];
+                
+                return `
+                    <div class="card bg-white soft-shadow-lg">
+                        <div class="p-8">
+                            <h2 class="font-heading text-2xl mb-6 text-gray-800">${t.checkout.shippingInformation}</h2>
+                            
+                            <form id="shipping-form" class="space-y-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.firstName}</label>
+                                        <input type="text" name="firstName" required class="form-input w-full" value="${this.formData.shipping.firstName || ''}">
+                                    </div>
+                                    <div>
+                                        <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.lastName}</label>
+                                        <input type="text" name="lastName" required class="form-input w-full" value="${this.formData.shipping.lastName || ''}">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.emailAddress}</label>
+                                    <input type="email" name="email" required class="form-input w-full" value="${this.formData.shipping.email || ''}">
+                                </div>
+                                
+                                <div>
+                                    <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.address}</label>
+                                    <input type="text" name="address" required class="form-input w-full" value="${this.formData.shipping.address || ''}">
+                                </div>
+                                
+                                <div>
+                                    <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.apartment}</label>
+                                    <input type="text" name="apartment" class="form-input w-full" value="${this.formData.shipping.apartment || ''}">
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div>
+                                        <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.city}</label>
+                                        <input type="text" name="city" required class="form-input w-full" value="${this.formData.shipping.city || ''}">
+                                    </div>
+                                    <div>
+                                        <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.province}</label>
+                                        <select name="province" required class="form-input w-full">
+                                            <option value="">Select Province</option>
+                                            <option value="ON" ${this.formData.shipping.province === 'ON' ? 'selected' : ''}>Ontario</option>
+                                            <option value="QC" ${this.formData.shipping.province === 'QC' ? 'selected' : ''}>Quebec</option>
+                                            <option value="BC" ${this.formData.shipping.province === 'BC' ? 'selected' : ''}>British Columbia</option>
+                                            <option value="AB" ${this.formData.shipping.province === 'AB' ? 'selected' : ''}>Alberta</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.postalCode}</label>
+                                        <input type="text" name="postalCode" required class="form-input w-full" value="${this.formData.shipping.postalCode || ''}">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.phoneNumber}</label>
+                                    <input type="tel" name="phone" required class="form-input w-full" value="${this.formData.shipping.phone || ''}">
+                                </div>
+                                
+                                <div class="flex items-center">
+                                    <input type="checkbox" name="newsletter" id="newsletter" class="mr-3" ${this.formData.shipping.newsletter ? 'checked' : ''}>
+                                    <label for="newsletter" class="font-body text-gray-700">${t.checkout.newsletter}</label>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary btn-lg w-full button-glow">
+                                    ${t.checkout.continueToPayment}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            renderPaymentForm() {
+                const t = window.translations[this.currentLanguage];
+                
+                return `
+                    <div class="card bg-white soft-shadow-lg">
+                        <div class="p-8">
+                            <h2 class="font-heading text-2xl mb-6 text-gray-800">${t.checkout.paymentInformation}</h2>
+                            
+                            <form id="payment-form" class="space-y-6">
+                                <div>
+                                    <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.cardNumber}</label>
+                                    <input type="text" name="cardNumber" required class="form-input w-full" placeholder="1234 5678 9012 3456" maxlength="19">
+                                </div>
+                                
+                                <div>
+                                    <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.nameOnCard}</label>
+                                    <input type="text" name="nameOnCard" required class="form-input w-full">
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.expiryDate}</label>
+                                        <input type="text" name="expiryDate" required class="form-input w-full" placeholder="MM/YY" maxlength="5">
+                                    </div>
+                                    <div>
+                                        <label class="block font-body font-medium text-gray-700 mb-2">${t.checkout.cvv}</label>
+                                        <input type="text" name="cvv" required class="form-input w-full" placeholder="123" maxlength="4">
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center">
+                                    <input type="checkbox" name="savePayment" id="savePayment" class="mr-3">
+                                    <label for="savePayment" class="font-body text-gray-700">${t.checkout.savePaymentInfo}</label>
+                                </div>
+                                
+                                <div class="bg-sage-50 border border-sage-200 rounded-lg p-4">
+                                    <div class="flex items-center space-x-2">
+                                        <i data-lucide="shield-check" class="h-5 w-5 text-sage-600"></i>
+                                        <p class="font-body text-sage-700 text-sm">${t.checkout.securePayment}</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex space-x-4">
+                                    <button type="button" onclick="checkoutPage.goToStep('shipping')" class="btn btn-secondary flex-1">
+                                        ${t.checkout.backToShipping}
+                                    </button>
+                                    <button type="submit" class="btn btn-primary btn-lg flex-1 button-glow">
+                                        ${t.checkout.reviewOrder}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            renderReviewStep() {
+                const t = window.translations[this.currentLanguage];
+                const summary = this.cartManager.getCartSummary();
+                
+                return `
+                    <div class="space-y-8">
+                        <div class="card bg-white soft-shadow-lg">
+                            <div class="p-8">
+                                <h2 class="font-heading text-2xl mb-6 text-gray-800">${t.checkout.reviewYourOrder}</h2>
+                                
+                                <!-- Shipping Address -->
+                                <div class="mb-6">
+                                    <h3 class="font-body text-lg font-semibold text-gray-800 mb-2">${t.checkout.shippingAddress}</h3>
+                                    <div class="bg-gray-50 rounded-lg p-4">
+                                        <p class="font-body text-gray-700">${this.formData.shipping.firstName} ${this.formData.shipping.lastName}</p>
+                                        <p class="font-body text-gray-700">${this.formData.shipping.address}</p>
+                                        ${this.formData.shipping.apartment ? `<p class="font-body text-gray-700">${this.formData.shipping.apartment}</p>` : ''}
+                                        <p class="font-body text-gray-700">${this.formData.shipping.city}, ${this.formData.shipping.province} ${this.formData.shipping.postalCode}</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Payment Method -->
+                                <div class="mb-6">
+                                    <h3 class="font-body text-lg font-semibold text-gray-800 mb-2">${t.checkout.paymentMethod}</h3>
+                                    <div class="bg-gray-50 rounded-lg p-4 flex items-center space-x-3">
+                                        <i data-lucide="credit-card" class="h-5 w-5 text-gray-600"></i>
+                                        <span class="font-body text-gray-700">**** **** **** ${this.formData.payment.cardNumber ? this.formData.payment.cardNumber.slice(-4) : '****'}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex space-x-4">
+                                    <button type="button" onclick="checkoutPage.goToStep('payment')" class="btn btn-secondary flex-1">
+                                        ${t.checkout.backToPayment}
+                                    </button>
+                                    <button type="button" onclick="checkoutPage.completeOrder()" class="btn btn-primary btn-lg flex-1 button-glow">
+                                        <i data-lucide="lock" class="h-4 w-4 mr-2"></i>
+                                        ${t.checkout.completeOrder}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            renderOrderSummary() {
+                const t = window.translations[this.currentLanguage];
+                const summary = this.cartManager.getCartSummary();
+                
+                return `
+                    <div class="card sticky top-24 bg-white soft-shadow-lg">
+                        <div class="p-8">
+                            <h2 class="font-heading text-2xl mb-6 text-gray-800">${t.checkout.orderSummary}</h2>
+                            
+                            <div class="space-y-4 mb-6">
+                                ${this.cartManager.cart.map(item => `
+                                    <div class="flex items-center space-x-4">
+                                        <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-lg">
+                                        <div class="flex-1">
+                                            <h3 class="font-body font-medium text-gray-800">${item.name}</h3>
+                                            <p class="font-body text-gray-600">Qty: ${item.quantity}</p>
+                                        </div>
+                                        <span class="font-body font-semibold text-gray-800">$${(item.price * item.quantity).toFixed(2)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            
+                            <div class="border-t border-gray-200 pt-6 space-y-4">
+                                <div class="flex justify-between">
+                                    <span class="font-body text-gray-600">${t.cart.subtotal}</span>
+                                    <span class="font-body font-semibold">$${summary.subtotal.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="font-body text-gray-600">${t.cart.shipping}</span>
+                                    <span class="font-body font-semibold">${summary.shipping === 0 ? 'Free' : '$' + summary.shipping.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="font-body text-gray-600">${t.cart.tax}</span>
+                                    <span class="font-body font-semibold">$${summary.tax.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between text-lg border-t border-gray-200 pt-4">
+                                    <span class="font-body font-semibold text-gray-800">${t.cart.total}</span>
+                                    <span class="font-body font-bold text-lilac-600">$${summary.total.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            
+                            ${summary.freeShipping ? `
+                                <div class="bg-sage-50 border border-sage-200 rounded-lg p-4 mt-6">
+                                    <p class="font-body text-sage-700 text-center font-medium">${t.cart.freeShipping}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            renderEmptyCheckout(container) {
+                const t = window.translations[this.currentLanguage];
+                
+                container.innerHTML = `
+                    <div class="text-center py-20 fade-in">
+                        <div class="inline-flex items-center justify-center w-24 h-24 bg-lilac-100 rounded-full mb-8">
+                            <i data-lucide="shopping-cart" class="h-12 w-12 text-lilac-400"></i>
+                        </div>
+                        
+                        <h1 class="font-heading text-4xl mb-4 text-gray-800">Your cart is empty</h1>
+                        <p class="font-body text-xl text-gray-600 mb-8 max-w-md mx-auto">Add some items to your cart before proceeding to checkout.</p>
+                        
+                        <button onclick="window.location.href='product_list.html'" class="btn btn-primary btn-lg button-glow gentle-hover">
+                            Continue Shopping
+                        </button>
+                    </div>
+                `;
+            }
+            
+            setupFormEventListeners() {
+                // Shipping form
+                const shippingForm = document.getElementById('shipping-form');
+                if (shippingForm) {
+                    shippingForm.addEventListener('submit', (e) => this.handleShippingSubmit(e));
+                }
+                
+                // Payment form
+                const paymentForm = document.getElementById('payment-form');
+                if (paymentForm) {
+                    paymentForm.addEventListener('submit', (e) => this.handlePaymentSubmit(e));
+                    
+                    // Format card number
+                    const cardNumberInput = paymentForm.querySelector('input[name="cardNumber"]');
+                    if (cardNumberInput) {
+                        cardNumberInput.addEventListener('input', (e) => {
+                            let value = e.target.value.replace(/\D/g, '');
+                            value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+                            e.target.value = value;
+                        });
+                    }
+                    
+                    // Format expiry date
+                    const expiryInput = paymentForm.querySelector('input[name="expiryDate"]');
+                    if (expiryInput) {
+                        expiryInput.addEventListener('input', (e) => {
+                            let value = e.target.value.replace(/\D/g, '');
+                            if (value.length >= 2) {
+                                value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                            }
+                            e.target.value = value;
+                        });
+                    }
+                }
+            }
+            
+            handleShippingSubmit(e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                
+                // Save shipping data
+                for (let [key, value] of formData.entries()) {
+                    this.formData.shipping[key] = value;
+                }
+                
+                this.goToStep('payment');
+            }
+            
+            handlePaymentSubmit(e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                
+                // Save payment data
+                for (let [key, value] of formData.entries()) {
+                    this.formData.payment[key] = value;
+                }
+                
+                this.goToStep('review');
+            }
+            
+            goToStep(step) {
+                this.currentStep = step;
+                this.renderCheckout();
+            }
+            
+            completeOrder() {
+                // Simulate order processing
+                const loadingOverlay = document.createElement('div');
+                loadingOverlay.className = 'fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center';
+                loadingOverlay.innerHTML = `
+                    <div class="text-center">
+                        <div class="w-16 h-16 border-4 border-lilac-200 border-t-lilac-600 rounded-full animate-spin mx-auto mb-4"></div>
+                        <p class="font-body text-lg text-gray-600">Processing your order...</p>
+                    </div>
+                `;
+                
+                document.body.appendChild(loadingOverlay);
+                
+                setTimeout(() => {
+                    // Clear cart and redirect to success page
+                    this.cartManager.clearCart();
+                    window.location.href = 'success.html';
+                }, 2000);
+            }
+            
+            toggleMobileMenu() {
+                const mobileMenu = document.getElementById('mobile-menu');
+                const menuToggle = document.getElementById('mobile-menu-toggle');
+                const icon = menuToggle?.querySelector('i');
+                
+                if (mobileMenu) {
+                    mobileMenu.classList.toggle('hidden');
+                    
+                    if (icon) {
+                        if (mobileMenu.classList.contains('hidden')) {
+                            icon.setAttribute('data-lucide', 'menu');
+                        } else {
+                            icon.setAttribute('data-lucide', 'x');
+                        }
+                        this.initializeLucideIcons();
+                    }
+                }
+            }
+            
+            toggleLanguage() {
+                this.currentLanguage = this.currentLanguage === 'en' ? 'fr' : 'en';
+                this.cartManager.currentLanguage = this.currentLanguage;
+                const langButton = document.getElementById('lang-toggle');
+                if (langButton) {
+                    langButton.querySelector('span').textContent = this.currentLanguage.toUpperCase();
+                }
+                this.renderCheckout();
+            }
+            
+            handleNewsletterSubmit(e) {
+                e.preventDefault();
+                const form = e.target;
+                
+                form.innerHTML = `
+                    <div class="flex items-center justify-center space-x-3 p-4 bg-sage-500/20 border border-sage-400/30 rounded-full backdrop-blur-sm">
+                        <div class="w-5 h-5 bg-sage-300 rounded-full"></div>
+                        <p class="text-sage-200 font-medium font-body">Welcome! Check your email for your 15% off code.</p>
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    form.innerHTML = `
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <input type="email" placeholder="Enter your email address" required class="flex-1 h-12 px-6 bg-white/10 border border-lilac-300/20 text-white placeholder:text-lilac-200 focus:border-lilac-400 focus:ring-lilac-400/20 rounded-full backdrop-blur-sm font-body form-input">
+                            <button type="submit" class="h-12 bg-blush-500 hover:bg-blush-600 text-white px-8 rounded-full soft-shadow gentle-hover font-body btn button-glow">Subscribe</button>
+                        </div>
+                    `;
+                }, 3000);
+            }
+            
+            initializeLucideIcons() {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }
+        }
+
+        // Initialize the page
+        let checkoutPage;
+        document.addEventListener('DOMContentLoaded', () => {
+            checkoutPage = new CheckoutPage();
+        });
+    </script>
+</body>
+</html>

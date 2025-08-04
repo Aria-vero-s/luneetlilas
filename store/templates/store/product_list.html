@@ -1,24 +1,79 @@
-{% extends 'base.html' %}
-{% block title %}Products – My Shop{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+{% block title %}All Products – My Shop{% endblock %}
+
 {% block content %}
-<h2>All Products</h2>
-<div class="row">
-  {% for product in products %}
-    <div class="col-md-4 mb-4">
-      <div class="card h-100">
-        {% if product.image %}
-          <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}">
-        {% endif %}
-        <div class="card-body d-flex flex-column">
-          <h5 class="card-title">{{ product.name }}</h5>
-          <p class="card-text mb-4">{{ product.description|truncatechars:100 }}</p>
-          <p class="fw-bold">{{ product.price }} €</p>
-          <a href="{% url 'store:product-detail' product.slug %}" class="btn btn-outline-primary mt-auto">View</a>
-        </div>
+<section class="py-12">
+  <div class="container mx-auto px-4">
+    <!-- Breadcrumb -->
+    <nav class="mb-6 text-sm text-gray-600">
+      <a href="{% url 'home' %}" class="hover:text-lilac-600">
+        ← Home
+      </a>
+    </nav>
+
+    <header class="text-center mb-12">
+      <h1 class="text-4xl font-semibold">All Products</h1>
+      <p class="text-gray-600 mt-2">Discover our full range of premium haircare essentials</p>
+    </header>
+
+    <!-- Filters & Sort (you can wire these up with JS if you like) -->
+    <div class="flex flex-wrap justify-between items-center mb-8 gap-4">
+      <div>
+        <label>Filter:</label>
+        <select id="category-filter" class="form-select">
+          <option value="all">All</option>
+          <!-- Add your categories here -->
+          <option value="hairMasks">Hair Masks</option>
+          <option value="serumsOils">Serums & Oils</option>
+        </select>
+      </div>
+      <div>
+        <label>Sort:</label>
+        <select id="sort-select" class="form-select">
+          <option value="featured">Featured</option>
+          <option value="price-low">Price: Low to High</option>
+          <option value="price-high">Price: High to Low</option>
+        </select>
       </div>
     </div>
-  {% empty %}
-    <p>No products found.</p>
-  {% endfor %}
-</div>
+
+    <!-- Products Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      {% for product in products %}
+      <div class="border rounded-lg overflow-hidden shadow hover:shadow-lg transition">
+        <a href="{% url 'store:product_detail' product.slug %}">
+          <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-48 object-cover"/>
+        </a>
+        <div class="p-4">
+          <h2 class="text-xl font-medium mb-2">
+            <a href="{% url 'store:product_detail' product.slug %}" class="hover:text-lilac-600">
+              {{ product.name }}
+            </a>
+          </h2>
+          <p class="text-lilac-600 font-semibold mb-4">€{{ product.price }}</p>
+          <form action="{% url 'store:add_to_cart' product.slug %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary w-full">
+              Add to Cart
+            </button>
+          </form>
+        </div>
+      </div>
+      {% empty %}
+      <p>No products found.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+  <!-- <script src="{% static 'js/luneetlilas-complete.js' %}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) { lucide.createIcons() }
+      // You can hook up your filter/sort dropdowns here...
+    });
+  </script> -->
 {% endblock %}

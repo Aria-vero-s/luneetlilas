@@ -28,5 +28,5 @@ urlpatterns = [
     # 2) Everything under /store/
     path('store/', include(('store.urls', 'store'), namespace='store')),
 
-    path('accounts/', include('django.contrib.auth.urls')),
+    path('accounts/', include('allauth.urls')),
 ]

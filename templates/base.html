@@ -1,56 +1,143 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <title>{% block title %}My Shop{% endblock %}</title>
-    <link 
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
-      rel="stylesheet" 
-      integrity="sha384-ENjdO4Dr2bkBIFxQpeoZ2c2qGqZjslI4tWertYp4MZU5oNfB1dEejvH6kp2APYm" 
-      crossorigin="anonymous">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    {% block extra_head %}{% endblock %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}<span data-i18n="brand">Lune &amp; Lilas</span>{% endblock %}</title>
+
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'css/globals.css' %}">
+  <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💜</text></svg>">
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+
+  {% block extra_head %}{% endblock %}
 </head>
-<body>
-<nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
-  <div class="container">
-    <a class="navbar-brand" href="{% url 'home' %}">My Shop</a>
-    <div class="collapse navbar-collapse">
-      <ul class="navbar-nav ms-auto">
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'store:product_list' %}">Products</a>
-        </li>
-        {% if user.is_authenticated %}
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'store:cart' %}">Cart</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'logout' %}">Logout</a>
-        </li>
-        {% else %}
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'login' %}">Login</a>
-        </li>
-        {% endif %}
-      </ul>
+
+<body class="bg-background text-foreground font-body">
+
+    <nav class="site-nav">
+        <div class="site-nav__inner">
+          <a href="{% url 'store:home' %}" class="site-nav__brand">
+            <span data-i18n="brand">Lune &amp; Lilas</span>
+          </a>
+      
+          <div class="site-nav__links">
+            <a href="{% url 'store:product_list' %}" data-i18n="nav.shop">Products</a>
+            <a href="{% url 'store:home' %}#about" data-i18n="nav.about">About</a>
+            <a href="{% url 'store:home' %}#salon" data-i18n="nav.salon">Salon</a>
+            <a href="{% url 'store:home' %}#reviews" data-i18n="nav.reviews">Reviews</a>
+          </div>
+      
+          <div class="site-nav__actions">
+            <a href="{% url 'store:cart' %}" class="site-nav__cart">
+              <span data-i18n="cart.title">Cart</span>
+              <span id="cart-count" class="site-nav__cart-count"></span>
+            </a>
+      
+            <div class="site-nav__auth">
+              {% if user.is_authenticated %}
+                <a href="{% url 'account_logout' %}" data-i18n="common.logout">Logout</a>
+              {% else %}
+                <a href="{% url 'account_login' %}" data-i18n="common.login">Login</a>
+              {% endif %}
+            </div>
+      
+            <button id="language-toggle">EN</button>
+          </div>
+        </div>
+      </nav>
+      
+
+  <!-- MAIN CONTENT -->
+  <main class="">
+    {% if messages %}
+      <div class="space-y-2 mb-4">
+        {% for msg in messages %}
+          <div class="p-2 bg-{{ msg.tags }}-100 border border-{{ msg.tags }}-300 rounded">
+            {{ msg }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="site-footer__inner container grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div>
+        <h4 class="site-footer__brand" data-i18n="brand">Lune &amp; Lilas</h4>
+        <p class="site-footer__text" data-i18n="footer.description">
+          Refined haircare crafted with professional expertise since 2020.
+        </p>
+      </div>
+  
+      <div>
+        <h5 class="site-footer__heading" data-i18n="footer.quickLinks">Products</h5>
+        <ul class="site-footer__list">
+          <li><a href="{% url 'store:product_list' %}" data-i18n="footer.shopAll">All Products</a></li>
+          <li><a href="{% url 'store:product_list' %}?category=hairMasks" data-i18n="productList.categories.hairMasks">Hair Masks</a></li>
+          <li><a href="{% url 'store:product_list' %}?category=serumsOils" data-i18n="productList.categories.serumsOils">Serums &amp; Oils</a></li>
+        </ul>
+      </div>
+  
+      <div>
+        <h5 class="site-footer__heading" data-i18n="footer.customerCare">Company</h5>
+        <ul class="site-footer__list">
+          <li><a href="{% url 'store:home' %}#about" data-i18n="nav.about">About Us</a></li>
+          <li><a href="{% url 'store:home' %}#salon" data-i18n="nav.salon">Our Salon</a></li>
+        </ul>
+      </div>
+  
+      <div>
+        <h5 class="site-footer__heading" data-i18n="footer.support">Support</h5>
+        <ul class="site-footer__list">
+          <li><a href="#" data-i18n="footer.contactUs">Contact</a></li>
+          <li><a href="#" data-i18n="footer.faq">FAQ</a></li>
+        </ul>
+      </div>
     </div>
-  </div>
-</nav>
+  
+    <div class="site-footer__bottom text-center font-body text-sm mt-8">
+      <span data-i18n="footer.allRightsReserved">© 2025 Lune &amp; Lilas. All rights reserved.</span>
+    </div>
+  </footer>
+  
 
-<div class="container">
-  {% if messages %}
-    {% for msg in messages %}
-      <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
-    {% endfor %}
-  {% endif %}
-  {% block content %}{% endblock %}
-</div>
+  {% block extra_js %}
+    <script src="{% static 'js/translations.js' %}"></script>
+    <script src="{% static 'js/cart-manager.js' %}"></script>
+    <script src="{% static 'js/state.js' %}"></script>
+  {% endblock %}
 
-<script 
-  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" 
-  integrity="sha384-qQ2Q/Gx+5d36OPChkPBtBi6bVZ2b87tD2ziZKvX9Ek59l1DzOvf7TUg5iJUUj4q+" 
-  crossorigin="anonymous"></script>
-{% block extra_js %}{% endblock %}
+  <script>
+    // toggle language
+    const btn = document.getElementById('language-toggle');
+    btn.addEventListener('click', () => {
+      const next = window.appState.state.language === 'en' ? 'fr' : 'en';
+      window.appState.setLanguage(next);
+    });
+
+    // on language change, update all data-i18n
+    window.appState.subscribe(({ language }) => {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const keys = el.dataset.i18n.split('.');
+        let val = window.translations[language];
+        for (const k of keys) val = val?.[k];
+        if (typeof val === 'string') el.textContent = val;
+      });
+      btn.textContent = language.toUpperCase();
+    });
+
+    // initial render
+    window.appState.setLanguage(window.appState.state.language);
+  </script>
 </body>
 </html>
