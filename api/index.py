@@ -1,4 +1,7 @@
 import os
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+
 from dotenv import load_dotenv
 load_dotenv()  # only for local .env
 
