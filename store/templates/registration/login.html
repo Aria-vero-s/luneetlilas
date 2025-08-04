@@ -13,11 +13,20 @@
       {% endif %}
       <div class="mb-3">
         <label for="id_username" class="form-label">Username</label>
-        {{ form.username|add_class:"form-control" }}
+        <input type="text"
+               name="username"
+               id="id_username"
+               value="{{ form.username.value|default_if_none:'' }}"
+               class="form-control"
+               required autofocus>
       </div>
       <div class="mb-3">
         <label for="id_password" class="form-label">Password</label>
-        {{ form.password|add_class:"form-control" }}
+        <input type="password"
+               name="password"
+               id="id_password"
+               class="form-control"
+               required>
       </div>
       <button type="submit" class="btn btn-primary">Log In</button>
     </form>
