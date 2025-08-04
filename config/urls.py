@@ -26,5 +26,5 @@ urlpatterns = [
     path('', TemplateView.as_view(template_name='index.html'), name='home'),
 
     # 2) Everything under /store/
-    path('store/', include('store.urls')),
+    path('store/', include(('store.urls', 'store'), namespace='store')),
 ]
