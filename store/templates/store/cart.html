@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Your Cart – My Shop{% endblock %}
+{% block content %}
+<h2>Your Cart</h2>
+{% if order.items.exists %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in order.items.all %}
+      <tr>
+        <td>{{ item.product.name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.get_total_item_price }} €</td>
+        <td>
+          <a href="{% url 'store:remove-from-cart' item.product.slug %}" 
+             class="btn btn-sm btn-danger">Remove</a>
+        </td>
+      </tr>
+      {% endfor %}
+      <tr>
+        <td colspan="2" class="text-end"><strong>Total:</strong></td>
+        <td colspan="2"><strong>{{ order.get_total }} €</strong></td>
+      </tr>
+    </tbody>
+  </table>
+  <a href="{% url 'store:checkout' %}" class="btn btn-primary">Proceed to Checkout</a>
+{% else %}
+  <p>Your cart is empty. <a href="{% url 'store:product-list' %}">Shop now</a>.</p>
+{% endif %}
+{% endblock %}

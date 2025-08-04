@@ -1,5 +1,14 @@
-<button id="checkout-button">Pay</button>
+{% extends 'base.html' %}
+{% block title %}Checkout – My Shop{% endblock %}
+{% block extra_head %}
 <script src="https://js.stripe.com/v3/"></script>
+{% endblock %}
+{% block content %}
+<h2>Checkout</h2>
+<p>Total: <strong>{{ request.user.order_set.get(ordered=False).get_total }} €</strong></p>
+<button id="checkout-button" class="btn btn-lg btn-success">Pay with Card</button>
+{% endblock %}
+{% block extra_js %}
 <script>
   const stripe = Stripe('{{ STRIPE_PUBLIC_KEY }}');
   document.getElementById('checkout-button').addEventListener('click', () => {
@@ -8,3 +17,4 @@
       .then(data => stripe.redirectToCheckout({ sessionId: data.id }));
   });
 </script>
+{% endblock %}

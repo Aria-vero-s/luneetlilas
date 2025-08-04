@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Payment Cancelled{% endblock %}
+{% block content %}
+  <div class="text-center py-5">
+    <h2>Payment Cancelled</h2>
+    <p>Your payment was not completed. You can try again or contact support.</p>
+    <a href="{% url 'store:cart' %}" class="btn btn-warning">Back to Cart</a>
+  </div>
+{% endblock %}
